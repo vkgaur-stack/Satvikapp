@@ -2,23 +2,26 @@
 
 namespace App\Controllers;
 
-use App\Models\Beneficiary as BeneficiaryModel;
-use App\Models\Donor as DonorModel;
+use App\Libraries\Metrics;
 
 class Dashboard extends BaseController
 {
     public function index()
     {
-        $beneficiaryModel = new BeneficiaryModel();
-        $donorModel = new DonorModel();
+        if (! can('dashboard.view')) {
+            return $this->response->setStatusCode(403)->setBody(view('errors/forbidden'));
+        }
 
-        $stats = [
-            'total_beneficiaries' => $beneficiaryModel->countAll(),
-            'active_beneficiaries' => $beneficiaryModel->where('status', 'active')->countAllResults(),
-            'total_donors' => $donorModel->countAll(),
-            'total_contributions' => $donorModel->selectSum('total_contribution')->get()->getRow()->total_contribution ?? 0,
-        ];
+        return view('dashboard/index');
+    }
 
-        return view('dashboard', ['stats' => $stats, 'title' => 'Dashboard']);
+    /** JSON feed for the React dashboard widgets. */
+    public function data()
+    {
+        if (! can('dashboard.view')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Forbidden']);
+        }
+
+        return $this->response->setJSON(Metrics::dashboard());
     }
 }
